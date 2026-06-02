@@ -34,7 +34,7 @@ Registro -> OAuth2 de cuentas -> Dashboard unificado -> Creacion/programacion de
    - `supabase/migrations/001_initial_schema.sql`
    - `supabase/migrations/002_social_account_credentials.sql`
 4. Verifica variables con `npm.cmd run env:check`.
-5. Instala dependencias con `npm.cmd install`.
+5. Instala dependencias con  `npm.cmd install`.
 6. Ejecuta `npm.cmd run dev`.
 
 ## Prueba rapida
