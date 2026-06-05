@@ -1,0 +1,92 @@
+﻿*** Begin Patch
+*** Update File: C:\Users\HP Specter\Documents\MetriWinay\src\app\api\webhooks\meta\route.ts
+@@
+-import { NextResponse } from "next/server";
+-import { ingestMetricSnapshot } from "@/modules/social/analytics";
+-
+-export async function GET(request: Request) {
+-  const url = new URL(request.url);
+-  const challenge = url.searchParams.get("hub.challenge");
+-
+-  return new Response(challenge ?? "ok", { status: 200 });
+-}
+-
+-export async function POST(request: Request) {
+-  const body = await request.json();
+-
+-  // Normalize provider webhook payloads into internal snapshots.
+-  await ingestMetricSnapshot({
+-    organizationId: body.organization_id,
+-    socialAccountId: body.social_account_id,
+-    providerMetricId: body.metric_id ?? "webhook",
+-    metricDate: new Date().toISOString().slice(0, 10),
+-    impressions: body.impressions ?? 0,
+-    reach: body.reach ?? 0,
+-    engagement: body.engagement ?? 0,
+-    followers: body.followers ?? 0
+-  });
+-
+-  return NextResponse.json({ received: true });
+-}
++import crypto from "node:crypto";
++import { NextResponse } from "next/server";
++import { env } from "@/lib/config";
++import { ingestMetricSnapshot } from "@/modules/social/analytics";
++
++function verifyMetaSignature(rawBody: string, signatureHeader: string | null) {
++  if (!signatureHeader || !env.META_APP_SECRET) return false;
++  const [algorithm, providedSignature] = signatureHeader.split("=");
++  if (algorithm !== "sha256" || !providedSignature) return false;
++
++  const expected = crypto
++    .createHmac("sha256", env.META_APP_SECRET)
++    .update(rawBody, "utf8")
++    .digest("hex");
++
++  const providedBuffer = Buffer.from(providedSignature, "hex");
++  const expectedBuffer = Buffer.from(expected, "hex");
++  if (providedBuffer.length !== expectedBuffer.length) return false;
++  return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
++}
++
++export async function GET(request: Request) {
++  const url = new URL(request.url);
++  const challenge = url.searchParams.get("hub.challenge");
++  const verifyToken = url.searchParams.get("hub.verify_token");
++
++  if (verifyToken && verifyToken !== env.META_WEBHOOK_VERIFY_TOKEN) {
++    return new Response("Forbidden", { status: 403 });
++  }
++
++  return new Response(challenge ?? "ok", { status: 200 });
++}
++
++export async function POST(request: Request) {
++  const rawBody = await request.text();
++  const signature = request.headers.get("x-hub-signature-256");
++
++  if (!verifyMetaSignature(rawBody, signature)) {
++    return NextResponse.json({ error: "Invalid signature." }, { status: 401 });
++  }
++
++  let body: Record<string, unknown>;
++  try {
++    body = JSON.parse(rawBody) as Record<string, unknown>;
++  } catch {
++    return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
++  }
++
++  await ingestMetricSnapshot({
++    organizationId: String(body.organization_id ?? ""),
++    socialAccountId: String(body.social_account_id ?? ""),
++    providerMetricId: String(body.metric_id ?? "webhook"),
++    metricDate: new Date().toISOString().slice(0, 10),
++    impressions: Number(body.impressions ?? 0),
++    reach: Number(body.reach ?? 0),
++    engagement: Number(body.engagement ?? 0),
++    followers: Number(body.followers ?? 0)
++  });
++
++  return NextResponse.json({ received: true });
++}
+*** End Patch

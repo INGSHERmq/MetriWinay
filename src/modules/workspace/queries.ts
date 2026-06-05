@@ -5,6 +5,8 @@ export type WorkspaceData = {
   organizationId: string | null;
   organizationName: string;
   accounts: SocialAccount[];
+  activeAccountId: string | null;
+  activeAccount: SocialAccount | null;
   queue: { id: string; title: string; date: string; status: string }[];
   metrics: { reach: number; engagement: number; followers: number; posts: number };
   adMetrics: {
@@ -54,7 +56,7 @@ const resultActionPriority = [
   "page_engagement"
 ];
 
-export async function getWorkspaceData(): Promise<WorkspaceData> {
+export async function getWorkspaceData(accountId?: string | null): Promise<WorkspaceData> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user }
@@ -93,19 +95,22 @@ export async function getWorkspaceData(): Promise<WorkspaceData> {
         .eq("organization_id", organizationId)
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .limit(5),
-      supabase
-        .from("metric_snapshots")
-        .select("metric_date,provider_metric_id,reach,engagement,followers")
-        .eq("organization_id", organizationId)
-        .not("provider_metric_id", "like", "meta_ads_%")
-        .order("metric_date", { ascending: false })
-        .limit(50),
-      supabase
-        .from("ad_metric_snapshots")
-        .select("ad_account_id,metric_date_start,metric_date_stop,impressions,reach,spend,clicks,engagement,raw_payload")
-        .eq("organization_id", organizationId)
-        .order("metric_date_stop", { ascending: false })
-        .limit(50)
+      (() => {
+        const snapshotsQuery = supabase
+          .from("metric_snapshots")
+          .select("metric_date,provider_metric_id,reach,engagement,followers,social_account_id")
+          .eq("organization_id", organizationId)
+          .not("provider_metric_id", "like", "meta_ads_%")
+          .order("metric_date", { ascending: false })
+          .limit(50);
+        return accountId ? snapshotsQuery.eq("social_account_id", accountId) : snapshotsQuery;
+      })(),
+supabase
+          .from("ad_metric_snapshots")
+          .select("ad_account_id,metric_date_start,metric_date_stop,impressions,reach,spend,clicks,engagement,raw_payload")
+          .eq("organization_id", organizationId)
+          .order("metric_date_stop", { ascending: false })
+          .limit(50)
     ]);
 
   const socialAccounts: SocialAccount[] = (accounts ?? []).map((account) => ({
@@ -117,6 +122,10 @@ export async function getWorkspaceData(): Promise<WorkspaceData> {
     accountType: account.account_type ?? "facebook_page",
     status: account.status
   }));
+
+  const activeAccount = accountId
+    ? socialAccounts.find((a) => a.id === accountId) ?? null
+    : null;
 
   const reach = (snapshots ?? []).reduce((sum, item) => sum + (item.reach ?? 0), 0);
   const engagement = (snapshots ?? []).reduce(
@@ -130,6 +139,8 @@ export async function getWorkspaceData(): Promise<WorkspaceData> {
     organizationId,
     organizationName: organization?.name ?? "Workspace",
     accounts: socialAccounts,
+    activeAccountId: accountId ?? null,
+    activeAccount,
     queue: (posts ?? []).map((post) => ({
       id: post.id,
       title: post.body.slice(0, 54),
@@ -152,6 +163,8 @@ function emptyWorkspace(): WorkspaceData {
     organizationId: null,
     organizationName: "Workspace",
     accounts: [],
+    activeAccountId: null,
+    activeAccount: null,
     queue: [],
     metrics: { reach: 0, engagement: 0, followers: 0, posts: 0 },
     adMetrics: {

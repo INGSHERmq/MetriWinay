@@ -141,6 +141,8 @@ export async function exchangeForLongLivedToken(accessToken: string): Promise<OA
 export async function discoverMetaAccounts(
   accessToken: string
 ): Promise<MetaDiscoveredAccount[]> {
+  console.log("🔍 Iniciando descubrimiento de cuentas de Meta con token:", accessToken.substring(0, 20) + "...");
+  
   const response = await fetch(
     graphUrl("/me/accounts", {
       fields:
@@ -150,12 +152,18 @@ export async function discoverMetaAccounts(
     { headers: { Accept: "application/json" } }
   );
 
+  console.log("📊 Response status:", response.status);
+
   if (!response.ok) {
-    throw new Error(`Meta account discovery failed: ${response.status}`);
+    const errorText = await response.text();
+    console.error("❌ Error al descubrir cuentas de Meta:", errorText);
+    throw new Error(`Meta account discovery failed: ${response.status} - ${errorText}`);
   }
 
   const payload = (await response.json()) as { data?: MetaPage[] };
-  return (payload.data ?? []).flatMap((page) => {
+  console.log("📋 Payload recibido:", JSON.stringify(payload, null, 2));
+  
+  const accounts = (payload.data ?? []).flatMap((page) => {
     const accounts: MetaDiscoveredAccount[] = [
       {
         providerAccountId: page.id,
@@ -176,6 +184,16 @@ export async function discoverMetaAccounts(
       });
     }
 
+    console.log("🎯 Cuenta procesada:", {
+      providerAccountId: page.id,
+      username: page.name,
+      hasToken: !!page.access_token,
+      hasInstagram: !!page.instagram_business_account
+    });
+    
     return accounts;
   });
+  
+  console.log("✅ Total de cuentas descubiertas:", accounts.length);
+  return accounts;
 }

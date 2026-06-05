@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { env } from "@/lib/config";
 import { decryptToken } from "@/modules/social/token-vault";
 import { ingestMetricSnapshot } from "@/modules/social/analytics";
@@ -52,7 +52,25 @@ function getAccountToken(account: AccountRow) {
 }
 
 export async function syncMetaAnalyticsForOrganization(organizationId: string) {
-  const supabase = createSupabaseAdminClient();
+  console.log("🔄 Iniciando sincronización de analíticas para organización:", organizationId);
+  
+  const supabase = await createSupabaseServerClient();
+  console.log("🔧 Cliente de servidor creado correctamente");
+  
+  // Verificar si el usuario existe en la organización
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_members")
+    .select("user_id, role")
+    .eq("organization_id", organizationId)
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) {
+    console.error("❌ Error al verificar membresía:", membershipError);
+  } else {
+    console.log("👤 Membresía encontrada:", membership);
+  }
+  
   const { data: accounts, error } = await supabase
     .from("social_accounts")
     .select(
@@ -62,22 +80,45 @@ export async function syncMetaAnalyticsForOrganization(organizationId: string) {
     .eq("provider", "meta")
     .eq("status", "ACTIVE");
 
-  if (error) throw error;
+  if (error) {
+    console.error("❌ Error al obtener cuentas sociales:", error);
+    throw error;
+  }
+
+  console.log("📋 Cuentas sociales encontradas:", accounts?.length || 0);
+  console.log("📋 Cuentas:", accounts?.map(acc => ({ id: acc.id, username: acc.username })) || []);
 
   const results = [];
   for (const account of (accounts ?? []) as AccountRow[]) {
-    results.push(await syncMetaAccountAnalytics(account));
+    console.log("🔄 Sincronizando cuenta:", account.username, account.provider_account_id);
+    const result = await syncMetaAccountAnalytics(account);
+    console.log("✅ Resultado de sincronización:", result);
+    results.push(result);
   }
 
-  results.push(...(await syncMetaAdsAnalyticsForOrganization(organizationId)));
+  const adsResults = await syncMetaAdsAnalyticsForOrganization(organizationId);
+  console.log("📊 Resultados de ads:", adsResults);
+  results.push(...adsResults);
+  
+  console.log("✅ Sincronización completada. Total de resultados:", results.length);
   return results;
 }
 
 async function syncMetaAccountAnalytics(account: AccountRow) {
+  console.log("🔍 Procesando cuenta:", {
+    id: account.id,
+    username: account.username,
+    type: account.account_type,
+    hasToken: !!(account.account_access_token_ciphertext && account.account_access_token_iv && account.account_access_token_tag)
+  });
+
   const accessToken = getAccountToken(account);
   if (!accessToken) {
+    console.warn("⚠️ Cuenta sin token de acceso:", account.username);
     return { accountId: account.id, ok: false, reason: "missing_page_token" };
   }
+
+  console.log("✅ Token de acceso obtenido para cuenta:", account.username);
 
   if (account.account_type === "instagram_business") {
     return syncInstagramSnapshot(account, accessToken);
@@ -105,16 +146,31 @@ async function syncFacebookPageSnapshot(account: AccountRow, accessToken: string
     : {};
 
   const insights = await fetchPageInsights(account, accessToken);
-  await ingestMetricSnapshot({
-    organizationId: account.organization_id,
-    socialAccountId: account.id,
-    providerMetricId: "meta_page_daily",
-    metricDate: today,
-    impressions: insights.impressions,
-    reach: insights.reach,
-    engagement: insights.engagement || profile.talking_about_count || 0,
-    followers: profile.followers_count ?? profile.fan_count ?? 0
-  });
+  
+  console.log("📊 Intentando insertar métrica para cuenta:", account.username);
+  console.log("📅 Fecha:", today);
+  console.log("📈 Impresiones:", insights.impressions);
+  console.log("👥 Alcance:", insights.reach);
+  console.log("❤️ Engagement:", insights.engagement || profile.talking_about_count || 0);
+  console.log("👤 Seguidores:", profile.followers_count ?? profile.fan_count ?? 0);
+  
+  try {
+    await ingestMetricSnapshot({
+      organizationId: account.organization_id,
+      socialAccountId: account.id,
+      providerMetricId: "meta_page_daily",
+      metricDate: today,
+      impressions: insights.impressions,
+      reach: insights.reach,
+      engagement: insights.engagement || profile.talking_about_count || 0,
+      followers: profile.followers_count ?? profile.fan_count ?? 0
+    });
+    
+    console.log("✅ Métrica insertada correctamente");
+  } catch (error) {
+    console.error("❌ Error al insertar métrica:", error);
+    throw error;
+  }
 
   return { accountId: account.id, ok: true };
 }
@@ -180,7 +236,10 @@ async function fetchPageInsights(account: AccountRow, accessToken: string) {
 }
 
 export async function syncMetaAdsAnalyticsForOrganization(organizationId: string) {
-  const supabase = createSupabaseAdminClient();
+  console.log("📊 Iniciando sincronización de ads para organización:", organizationId);
+  
+  const supabase = await createSupabaseServerClient();
+  
   const { data: accountForConnection, error: accountError } = await supabase
     .from("social_accounts")
     .select("oauth_connection_id")
@@ -190,7 +249,13 @@ export async function syncMetaAdsAnalyticsForOrganization(organizationId: string
     .limit(1)
     .maybeSingle();
 
-  if (accountError) throw accountError;
+  if (accountError) {
+    console.error("❌ Error al obtener conexión para ads:", accountError);
+    throw accountError;
+  }
+  
+  console.log("🔗 Conexión para ads encontrada:", !!accountForConnection?.oauth_connection_id);
+
   if (!accountForConnection?.oauth_connection_id) return [];
 
   const { data: connection, error } = await supabase
@@ -201,9 +266,17 @@ export async function syncMetaAdsAnalyticsForOrganization(organizationId: string
     .eq("status", "ACTIVE")
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    console.error("❌ Error al obtener conexión OAuth:", error);
+    throw error;
+  }
+  
+  console.log("🔑 Conexión OAuth encontrada:", !!connection);
+  console.log("📋 Scopes de la conexión:", connection?.scopes);
+
   if (!connection) return [];
   if (!connection.scopes?.includes("ads_read")) {
+    console.warn("⚠️ Falta el scope ads_read");
     return [
       {
         ok: false,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseOAuthState } from "@/modules/social/oauth";
 import { upsertMetaAccounts } from "@/modules/social/account-sync";
 import {
@@ -41,27 +41,38 @@ export async function GET(
     ? encryptToken(tokens.refreshToken)
     : null;
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
+
+  const insertData = {
+    user_id: parsedState.userId,
+    provider,
+    scopes: tokens.scopes,
+    access_token_ciphertext: encryptedAccessToken.ciphertext,
+    access_token_iv: encryptedAccessToken.iv,
+    access_token_tag: encryptedAccessToken.tag,
+    refresh_token_ciphertext: encryptedRefreshToken?.ciphertext,
+    refresh_token_iv: encryptedRefreshToken?.iv,
+    refresh_token_tag: encryptedRefreshToken?.tag,
+    expires_at: tokens.expiresAt,
+    status: "ACTIVE"
+  };
+
+  console.log("🔍 Datos que se van a insertar:", insertData);
+
   const { data: connection, error } = await supabase
     .from("oauth_connections")
-    .insert({
-      user_id: parsedState.userId,
-      provider,
-      scopes: tokens.scopes,
-      access_token_ciphertext: encryptedAccessToken.ciphertext,
-      access_token_iv: encryptedAccessToken.iv,
-      access_token_tag: encryptedAccessToken.tag,
-      refresh_token_ciphertext: encryptedRefreshToken?.ciphertext,
-      refresh_token_iv: encryptedRefreshToken?.iv,
-      refresh_token_tag: encryptedRefreshToken?.tag,
-      expires_at: tokens.expiresAt,
-      status: "ACTIVE"
-    })
+    .insert(insertData)
     .select("id")
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("❌ Error al insertar en oauth_connections:", error);
+    return NextResponse.json({ 
+      error: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code 
+    }, { status: 500 });
   }
 
   let accounts: MetaDiscoveredAccount[] = [];

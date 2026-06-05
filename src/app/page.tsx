@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { AccountCard } from "@/components/account-card";
+import { AccountFilter } from "@/components/account-filter";
 import { AnalyticsChart } from "@/components/analytics-chart";
 import { AppShell } from "@/components/app-shell";
 import { MetricCard } from "@/components/metric-card";
@@ -35,7 +36,7 @@ const validSections = new Set([
 export default async function Home({
   searchParams
 }: {
-  searchParams: Promise<{ section?: string }>;
+  searchParams: Promise<{ section?: string; account?: string }>;
 }) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -45,17 +46,17 @@ export default async function Home({
   if (!user) redirect("/login");
 
   await ensureDefaultOrganization({ userId: user.id, email: user.email });
-  const workspace = await getWorkspaceData();
-  const { section } = await searchParams;
+  const { section, account } = await searchParams;
+  const workspace = await getWorkspaceData(account ?? null);
   const activeSection = section && validSections.has(section) ? section : "dashboard";
 
   return (
     <AppShell activeSection={activeSection} organizationName={workspace.organizationName}>
-      {activeSection === "dashboard" ? <DashboardView workspace={workspace} /> : null}
+      {activeSection === "dashboard" ? <DashboardView workspace={workspace} activeSection={activeSection} /> : null}
       {activeSection === "publicaciones" ? (
         <PublishingView workspace={workspace} />
       ) : null}
-      {activeSection === "analiticas" ? <AnalyticsView workspace={workspace} /> : null}
+      {activeSection === "analiticas" ? <AnalyticsView workspace={workspace} activeSection={activeSection} /> : null}
       {activeSection === "reportes" ? <ReportsView workspace={workspace} /> : null}
       {activeSection === "inbox" ? <InboxView /> : null}
       {activeSection === "conexiones" ? <ConnectionsView workspace={workspace} /> : null}
@@ -64,9 +65,12 @@ export default async function Home({
   );
 }
 
-function DashboardView({ workspace }: { workspace: WorkspaceData }) {
+function DashboardView({ workspace, activeSection }: { workspace: WorkspaceData; activeSection: string }) {
   return (
       <div className="space-y-6">
+        {workspace.accounts.length > 1 ? (
+          <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
+        ) : null}
         <section className="metric-grid gap-4">
           <MetricCard
             label="Alcance"
@@ -167,9 +171,12 @@ function PublishingView({ workspace }: { workspace: WorkspaceData }) {
   );
 }
 
-function AnalyticsView({ workspace }: { workspace: WorkspaceData }) {
+function AnalyticsView({ workspace, activeSection }: { workspace: WorkspaceData; activeSection: string }) {
   return (
     <div className="space-y-6">
+      {workspace.accounts.length > 1 ? (
+        <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
+      ) : null}
       <section className="metric-grid gap-4">
         <MetricCard label="Alcance" value={workspace.metrics.reach} change="real" icon={Eye} tone="teal" />
         <MetricCard
