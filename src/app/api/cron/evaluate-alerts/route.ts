@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/config";
 import { evaluateAllOrganizationsAlerts } from "@/modules/social/alerts";
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

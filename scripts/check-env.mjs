@@ -29,7 +29,8 @@ const required = [
   "TOKEN_ENCRYPTION_KEY_BASE64",
   "META_CLIENT_ID",
   "META_CLIENT_SECRET",
-  "META_REDIRECT_URI"
+  "META_REDIRECT_URI",
+  "CRON_SECRET"
 ];
 
 let ok = true;
