@@ -19,6 +19,19 @@ type InsightValue = {
   values?: { value?: number; end_time?: string }[];
 };
 
+type DetailedPageInsightsResult = {
+  impressions: number;
+  reach: number;
+  engagement: number;
+  impressionsUnique: number;
+  impressionsPaid: number;
+  impressionsOrganic: number;
+  engagedUsers: number;
+  fanAdds: number;
+  fanRemoves: number;
+  pageViews: number;
+};
+
 function getCompleteLast30DaysTimeRange(now = new Date()) {
   const until = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
   const since = new Date(until);
@@ -147,13 +160,6 @@ async function syncFacebookPageSnapshot(account: AccountRow, accessToken: string
 
   const insights = await fetchPageInsights(account, accessToken);
   
-  console.log("📊 Intentando insertar métrica para cuenta:", account.username);
-  console.log("📅 Fecha:", today);
-  console.log("📈 Impresiones:", insights.impressions);
-  console.log("👥 Alcance:", insights.reach);
-  console.log("❤️ Engagement:", insights.engagement || profile.talking_about_count || 0);
-  console.log("👤 Seguidores:", profile.followers_count ?? profile.fan_count ?? 0);
-  
   try {
     await ingestMetricSnapshot({
       organizationId: account.organization_id,
@@ -163,7 +169,16 @@ async function syncFacebookPageSnapshot(account: AccountRow, accessToken: string
       impressions: insights.impressions,
       reach: insights.reach,
       engagement: insights.engagement || profile.talking_about_count || 0,
-      followers: profile.followers_count ?? profile.fan_count ?? 0
+      followers: profile.followers_count ?? profile.fan_count ?? 0,
+      detailed: {
+        impressionsUnique: insights.impressionsUnique,
+        impressionsPaid: insights.impressionsPaid,
+        impressionsOrganic: insights.impressionsOrganic,
+        engagedUsers: insights.engagedUsers,
+        fanAdds: insights.fanAdds,
+        fanRemoves: insights.fanRemoves,
+        pageViews: insights.pageViews
+      }
     });
     
     console.log("✅ Métrica insertada correctamente");
@@ -203,12 +218,16 @@ async function syncInstagramSnapshot(account: AccountRow, accessToken: string) {
   return { accountId: account.id, ok: response.ok };
 }
 
-async function fetchPageInsights(account: AccountRow, accessToken: string) {
+async function fetchPageInsights(account: AccountRow, accessToken: string): Promise<DetailedPageInsightsResult> {
   const since = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000).toString();
   const until = Math.floor(Date.now() / 1000).toString();
+
+  const metric =
+    "page_impressions,page_post_engagements,page_impressions_unique,page_impressions_paid,page_impressions_organic,page_engaged_users,page_fan_adds,page_fan_removes,page_views_total";
+
   const response = await fetch(
     graphUrl(`/${account.provider_account_id}/insights`, {
-      metric: "page_impressions,page_post_engagements",
+      metric,
       period: "day",
       since,
       until,
@@ -218,7 +237,11 @@ async function fetchPageInsights(account: AccountRow, accessToken: string) {
   );
 
   if (!response.ok) {
-    return { impressions: 0, reach: 0, engagement: 0 };
+    return {
+      impressions: 0, reach: 0, engagement: 0,
+      impressionsUnique: 0, impressionsPaid: 0, impressionsOrganic: 0,
+      engagedUsers: 0, fanAdds: 0, fanRemoves: 0, pageViews: 0
+    };
   }
 
   const payload = (await response.json()) as { data?: InsightValue[] };
@@ -231,7 +254,14 @@ async function fetchPageInsights(account: AccountRow, accessToken: string) {
   return {
     impressions,
     reach: impressions,
-    engagement: getTotal("page_post_engagements")
+    engagement: getTotal("page_post_engagements"),
+    impressionsUnique: getTotal("page_impressions_unique"),
+    impressionsPaid: getTotal("page_impressions_paid"),
+    impressionsOrganic: getTotal("page_impressions_organic"),
+    engagedUsers: getTotal("page_engaged_users"),
+    fanAdds: getTotal("page_fan_adds"),
+    fanRemoves: getTotal("page_fan_removes"),
+    pageViews: getTotal("page_views_total")
   };
 }
 
@@ -329,8 +359,10 @@ export async function syncMetaAdsAnalyticsForOrganization(organizationId: string
   for (const adAccount of adAccountsPayload.data ?? []) {
     const insightsResponse = await fetch(
       graphUrl(`/${adAccount.id}/insights`, {
+        level: "campaign",
+        time_increment: "1",
         fields:
-          "impressions,reach,spend,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_thruplay_watched_actions,date_start,date_stop",
+          "campaign_id,campaign_name,impressions,reach,spend,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_thruplay_watched_actions,date_start,date_stop",
         time_range: JSON.stringify(timeRange),
         access_token: accessToken
       }),
@@ -355,6 +387,8 @@ export async function syncMetaAdsAnalyticsForOrganization(organizationId: string
 
     const insightsPayload = (await insightsResponse.json()) as {
       data?: {
+        campaign_id?: string;
+        campaign_name?: string;
         impressions?: string;
         reach?: string;
         spend?: string;
@@ -381,6 +415,8 @@ export async function syncMetaAdsAnalyticsForOrganization(organizationId: string
           organization_id: organizationId,
           ad_account_id: adAccount.id,
           ad_account_name: adAccount.name,
+          campaign_id: row.campaign_id,
+          campaign_name: row.campaign_name,
           metric_date_start: row.date_start,
           metric_date_stop: row.date_stop,
           impressions: Number(row.impressions ?? 0),
@@ -391,7 +427,7 @@ export async function syncMetaAdsAnalyticsForOrganization(organizationId: string
           raw_payload: { ...row, account_currency: adAccount.currency ?? "USD" }
         },
         {
-          onConflict: "organization_id,ad_account_id,metric_date_start,metric_date_stop"
+          onConflict: "organization_id,ad_account_id,campaign_id,metric_date_start,metric_date_stop"
         }
       );
 
@@ -403,3 +439,5 @@ export async function syncMetaAdsAnalyticsForOrganization(organizationId: string
 
   return results;
 }
+
+

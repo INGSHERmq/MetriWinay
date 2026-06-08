@@ -4,9 +4,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 export const schedulePostSchema = z.object({
   organizationId: z.string().uuid(),
   accountIds: z.array(z.string().uuid()).min(1),
-  body: z.string().min(1).max(2200),
+  body: z.string().max(2200).default(""),
   mediaUrls: z.array(z.string().url()).default([]),
   scheduledFor: z.string().datetime(),
+  postType: z.enum(["feed", "story", "reel"]).default("feed"),
   createdBy: z.string().uuid().optional()
 });
 
@@ -27,7 +28,7 @@ export async function schedulePost(input: z.infer<typeof schedulePostSchema>) {
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   const targets = payload.accountIds.map((accountId) => ({
     post_id: post.id,
@@ -36,7 +37,11 @@ export async function schedulePost(input: z.infer<typeof schedulePostSchema>) {
   }));
 
   const { error: targetsError } = await supabase.from("post_targets").insert(targets);
-  if (targetsError) throw targetsError;
+  if (targetsError) throw new Error(targetsError.message);
+
+  if (payload.postType !== "feed") {
+    await supabase.from("posts").update({ post_type: payload.postType }).eq("id", post.id);
+  }
 
   return post;
 }

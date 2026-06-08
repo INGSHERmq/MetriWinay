@@ -2,6 +2,8 @@ export type SocialProvider = "meta";
 
 export type SocialAccountStatus = "ACTIVE" | "TOKEN_EXPIRED" | "DISCONNECTED";
 
+export type PostType = "feed" | "story" | "reel";
+
 export type PostStatus =
   | "DRAFT"
   | "SCHEDULED"

@@ -15,9 +15,9 @@ const META_BASIC_SCOPES = [
 const META_PUBLISHING_SCOPES = [
   ...META_BASIC_SCOPES,
   "pages_manage_posts",
-  "instagram_basic",
-  "instagram_content_publish",
-  "instagram_manage_insights"
+  "pages_manage_engagement",
+  "pages_read_user_content",
+  "facebook_branded_content_ads_brand"
 ];
 
 type MetaPage = {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/config";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { syncMetaAnalyticsForOrganization } from "@/modules/social/meta-analytics";
+import { syncAdBreakdownsForOrganization } from "@/modules/social/meta-breakdowns";
 import { getRateLimitKey, takeToken } from "@/modules/social/rate-limit";
 
 export async function POST(request: Request) {
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
 
   for (const organizationId of organizationIds) {
     await syncMetaAnalyticsForOrganization(organizationId);
+    await syncAdBreakdownsForOrganization(organizationId);
   }
 
   return NextResponse.json({ syncedOrganizations: organizationIds.size });

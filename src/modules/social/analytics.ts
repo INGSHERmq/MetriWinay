@@ -1,6 +1,16 @@
 import { env } from "@/lib/config";
 import { createClient } from "@supabase/supabase-js";
 
+export type DetailedPageInsights = {
+  impressionsUnique?: number;
+  impressionsPaid?: number;
+  impressionsOrganic?: number;
+  engagedUsers?: number;
+  fanAdds?: number;
+  fanRemoves?: number;
+  pageViews?: number;
+};
+
 export async function ingestMetricSnapshot(input: {
   organizationId: string;
   socialAccountId: string;
@@ -10,6 +20,7 @@ export async function ingestMetricSnapshot(input: {
   reach: number;
   engagement: number;
   followers: number;
+  detailed?: DetailedPageInsights;
 }) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for metrics insertion.");
@@ -44,7 +55,14 @@ export async function ingestMetricSnapshot(input: {
       impressions: input.impressions,
       reach: input.reach,
       engagement: input.engagement,
-      followers: input.followers
+      followers: input.followers,
+      impressions_unique: input.detailed?.impressionsUnique ?? 0,
+      impressions_paid: input.detailed?.impressionsPaid ?? 0,
+      impressions_organic: input.detailed?.impressionsOrganic ?? 0,
+      engaged_users: input.detailed?.engagedUsers ?? 0,
+      fan_adds: input.detailed?.fanAdds ?? 0,
+      fan_removes: input.detailed?.fanRemoves ?? 0,
+      page_views: input.detailed?.pageViews ?? 0
     },
     { onConflict: "social_account_id,provider_metric_id,metric_date" }
   ).select();
