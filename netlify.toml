@@ -1,0 +1,25 @@
+[build]
+  command = "next build"
+
+[[schedule]]
+  interval = "*/30 * * * *"
+  function = "trigger-analytics-polling"
+
+[[schedule]]
+  interval = "* * * * *"
+  function = "trigger-publish-posts"
+
+[[schedule]]
+  interval = "*/15 * * * *"
+  function = "trigger-evaluate-alerts"
+
+[[schedule]]
+  interval = "0 */6 * * *"
+  function = "trigger-refresh-tokens"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

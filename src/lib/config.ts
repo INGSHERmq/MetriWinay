@@ -4,6 +4,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default(() => {
     if (process.env.NEXT_PUBLIC_VERCEL_URL) return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
     if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    if (process.env.URL) return process.env.URL;
     return "http://localhost:3000";
   }),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
