@@ -5,7 +5,6 @@ export const metadata: Metadata = {
   title: "MetriWinay",
   description: "Dashboard de redes sociales, programacion y analiticas."
 };
-
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">
