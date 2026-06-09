@@ -1,8 +1,8 @@
-export type SocialProvider = "meta";
+export type SocialProvider = "meta" | "tiktok";
 
 export type SocialAccountStatus = "ACTIVE" | "TOKEN_EXPIRED" | "DISCONNECTED";
 
-export type PostType = "feed" | "story" | "reel";
+export type PostType = "feed" | "story" | "reel" | "video";
 
 export type PostStatus =
   | "DRAFT"
@@ -24,6 +24,6 @@ export type SocialAccount = {
   providerAccountId: string;
   username: string;
   avatarUrl?: string;
-  accountType?: "facebook_page" | "instagram_business";
+  accountType?: "facebook_page" | "instagram_business" | "tiktok_user" | "tiktok_business";
   status: SocialAccountStatus;
 };

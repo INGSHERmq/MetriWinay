@@ -370,19 +370,33 @@ function ConnectionsView({ workspace }: { workspace: WorkspaceData }) {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">Conexiones</h2>
-          <p className="text-sm text-muted">Cuentas importadas desde Meta.</p>
+          <p className="text-sm text-muted">Cuentas importadas desde Meta y TikTok.</p>
         </div>
-        <a
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-coral px-3 text-sm font-semibold text-white"
-          href="/api/oauth/meta/authorize"
-        >
-          Conectar Meta
-        </a>
+        <div className="flex gap-2">
+          <a
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-black px-3 text-sm font-semibold text-white"
+            href="/api/oauth/tiktok/authorize"
+          >
+            TikTok
+          </a>
+          <a
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-coral px-3 text-sm font-semibold text-white"
+            href="/api/oauth/meta/authorize"
+          >
+            Conectar Meta
+          </a>
+        </div>
       </div>
       <div className="space-y-3">
-        {workspace.accounts.map((account) => (
-          <AccountCard account={account} key={account.id} />
-        ))}
+        {workspace.accounts.length === 0 ? (
+          <div className="rounded-md border border-dashed border-line bg-panel p-4 text-sm text-muted">
+            Aun no hay cuentas conectadas.
+          </div>
+        ) : (
+          workspace.accounts.map((account) => (
+            <AccountCard account={account} key={account.id} />
+          ))
+        )}
       </div>
     </section>
   );

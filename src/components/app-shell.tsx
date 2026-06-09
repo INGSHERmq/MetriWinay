@@ -73,6 +73,13 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-3">
             <a
+              href="/api/oauth/tiktok/authorize"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-black px-3 text-sm font-semibold text-white shadow-soft transition hover:bg-gray-800"
+            >
+              <PlugZap size={16} />
+              TikTok
+            </a>
+            <a
               href="/api/oauth/meta/authorize"
               className="inline-flex h-10 items-center gap-2 rounded-md bg-coral px-3 text-sm font-semibold text-white shadow-soft transition hover:bg-[#cf594b]"
             >

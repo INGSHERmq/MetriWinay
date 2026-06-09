@@ -16,6 +16,9 @@ const envSchema = z.object({
   META_GRAPH_API_VERSION: z.string().default("v25.0"),
   META_OAUTH_SCOPE_MODE: z.enum(["basic", "publishing"]).default("basic"),
   META_REDIRECT_URI: z.string().url().optional(),
+  TIKTOK_CLIENT_KEY: z.string().optional(),
+  TIKTOK_CLIENT_SECRET: z.string().optional(),
+  TIKTOK_REDIRECT_URI: z.string().url().optional(),
   CRON_SECRET: z.string().optional()
 });
 
@@ -30,5 +33,8 @@ export const env = envSchema.parse({
   META_GRAPH_API_VERSION: process.env.META_GRAPH_API_VERSION,
   META_OAUTH_SCOPE_MODE: process.env.META_OAUTH_SCOPE_MODE,
   META_REDIRECT_URI: process.env.META_REDIRECT_URI,
+  TIKTOK_CLIENT_KEY: process.env.TIKTOK_CLIENT_KEY,
+  TIKTOK_CLIENT_SECRET: process.env.TIKTOK_CLIENT_SECRET,
+  TIKTOK_REDIRECT_URI: process.env.TIKTOK_REDIRECT_URI,
   CRON_SECRET: process.env.CRON_SECRET
 });

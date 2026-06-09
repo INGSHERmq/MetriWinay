@@ -6,6 +6,7 @@ export function createOAuthState(input: {
   userId: string;
   provider: SocialProvider;
   organizationId: string;
+  codeVerifier?: string;
 }) {
   const nonce = crypto.randomBytes(16).toString("hex");
   return Buffer.from(JSON.stringify({ ...input, nonce })).toString("base64url");
@@ -16,6 +17,7 @@ export function parseOAuthState(state: string): {
   provider: SocialProvider;
   organizationId: string;
   nonce: string;
+  codeVerifier?: string;
 } {
   return JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
 }
