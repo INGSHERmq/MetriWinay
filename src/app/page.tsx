@@ -45,7 +45,7 @@ const validSections = new Set([
 export default async function Home({
   searchParams
 }: {
-  searchParams: Promise<{ section?: string; account?: string; campaign?: string }>;
+  searchParams: Promise<{ section?: string; account?: string; campaign?: string; provider?: string }>;
 }) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -55,8 +55,8 @@ export default async function Home({
   if (!user) redirect("/login");
 
   await ensureDefaultOrganization({ userId: user.id, email: user.email });
-  const { section, account, campaign } = await searchParams;
-  const workspace = await getWorkspaceData(account ?? null, campaign ?? null);
+  const { section, account, campaign, provider } = await searchParams;
+  const workspace = await getWorkspaceData(account ?? null, campaign ?? null, provider ?? null);
   const activeSection = section && validSections.has(section) ? section : "dashboard";
 
   return (
@@ -74,12 +74,53 @@ export default async function Home({
   );
 }
 
+function ProviderFilter({ activeProvider, section }: { activeProvider: string | null; section: string }) {
+  const sectionParam = section !== "dashboard" ? `&section=${section}` : "";
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <a
+        href={`?${sectionParam}`}
+        className={`inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors ${
+          !activeProvider
+            ? "border-teal bg-teal/10 text-teal"
+            : "border-line bg-white text-muted hover:bg-panel"
+        }`}
+      >
+        Todas
+      </a>
+      <a
+        href={`?provider=meta${sectionParam}`}
+        className={`inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors ${
+          activeProvider === "meta"
+            ? "border-blue-500 bg-blue-50 text-blue-600"
+            : "border-line bg-white text-muted hover:bg-panel"
+        }`}
+      >
+        Facebook
+      </a>
+      <a
+        href={`?provider=tiktok${sectionParam}`}
+        className={`inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors ${
+          activeProvider === "tiktok"
+            ? "border-black bg-gray-100 text-black"
+            : "border-line bg-white text-muted hover:bg-panel"
+        }`}
+      >
+        TikTok
+      </a>
+    </div>
+  );
+}
+
 function DashboardView({ workspace, activeSection }: { workspace: WorkspaceData; activeSection: string }) {
   return (
       <div className="space-y-6">
-        {workspace.accounts.length > 1 ? (
-          <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
-        ) : null}
+        <div className="flex flex-wrap items-center gap-3">
+          <ProviderFilter activeProvider={workspace.activeProvider} section={activeSection} />
+          {workspace.accounts.length > 1 ? (
+            <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
+          ) : null}
+        </div>
         <section className="metric-grid gap-4">
           <MetricCard
             label="Alcance"
@@ -204,9 +245,12 @@ function AnalyticsView({ workspace, activeSection, activeCampaignId }: { workspa
 
   return (
     <div className="space-y-6">
-      {workspace.accounts.length > 1 ? (
-        <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
-      ) : null}
+      <div className="flex flex-wrap items-center gap-3">
+        <ProviderFilter activeProvider={workspace.activeProvider} section={activeSection} />
+        {workspace.accounts.length > 1 ? (
+          <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
+        ) : null}
+      </div>
 
       <section className="metric-grid gap-4">
         <div className="rounded-md border border-line bg-white p-4 shadow-soft">

@@ -60,12 +60,21 @@ export function AnalyticsChart({ data }: { data: ChartPoint[] }) {
     const response = await fetch("/api/analytics/sync", { method: "POST" });
     setSyncing(false);
 
-    const payload = (await response.json().catch(() => null)) as SyncResponse | null;
-    const failedResult = payload?.results?.find((result) => result.ok === false);
+    const payload = (await response.json().catch(() => null)) as {
+      meta?: { ok?: boolean; reason?: string; message?: string }[];
+      tiktok?: { ok?: boolean; reason?: string }[];
+      breakdowns?: unknown;
+    } | null;
 
-    if (!response.ok || failedResult) {
+    if (!response.ok) {
       if (showMessage) setMessage("No se pudieron sincronizar metricas.");
-      if (failedResult?.message && showMessage) setMessage(`Meta: ${failedResult.message}`);
+      return;
+    }
+
+    const metaFailed = payload?.meta?.find((r) => r.ok === false);
+
+    if (metaFailed?.message && showMessage) {
+      setMessage(`Meta: ${metaFailed.message}`);
       return;
     }
 
@@ -147,13 +156,13 @@ export function AnalyticsChart({ data }: { data: ChartPoint[] }) {
         ))}
       </div>
 
-      <div className="h-72">
+      <div style={{ minWidth: 0, height: 288 }}>
         {filtered.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-muted">
             Sin datos disponibles. Sincroniza las metricas.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={288}>
             <LineChart data={filtered} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis

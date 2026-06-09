@@ -7,6 +7,7 @@ export type WorkspaceData = {
   accounts: SocialAccount[];
   activeAccountId: string | null;
   activeAccount: SocialAccount | null;
+  activeProvider: string | null;
   queue: { id: string; title: string; date: string; status: string; postType: string }[];
   metrics: {
     reach: number;
@@ -94,7 +95,7 @@ const resultActionPriority = [
   "page_engagement"
 ];
 
-export async function getWorkspaceData(accountId?: string | null, campaignId?: string | null): Promise<WorkspaceData> {
+export async function getWorkspaceData(accountId?: string | null, campaignId?: string | null, activeProvider?: string | null): Promise<WorkspaceData> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user }
@@ -120,30 +121,51 @@ export async function getWorkspaceData(accountId?: string | null, campaignId?: s
     return emptyWorkspace();
   }
 
-  const [{ data: accounts }, { data: posts }, { data: snapshots }, { data: adSnapshots }] =
-    await Promise.all([
-      supabase
-        .from("social_accounts")
-        .select("id,provider,provider_account_id,username,avatar_url,account_type,status")
+  const accountsQuery = supabase
+    .from("social_accounts")
+    .select("id,provider,provider_account_id,username,avatar_url,account_type,status")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  const { data: accounts } = await accountsQuery;
+  const filteredAccounts = activeProvider
+    ? (accounts ?? []).filter((a) => a.provider === activeProvider)
+    : (accounts ?? []);
+
+  const accountIds = filteredAccounts.map((a) => a.id);
+
+  const snapshotsBaseQuery = accountIds.length > 0
+    ? supabase
+        .from("metric_snapshots")
+        .select("metric_date,provider_metric_id,impressions,reach,engagement,followers,social_account_id,impressions_unique,impressions_paid,impressions_organic,engaged_users,fan_adds,fan_removes,page_views")
         .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false }),
+        .in("social_account_id", accountIds)
+        .not("provider_metric_id", "like", "meta_ads_%")
+        .not("provider_metric_id", "like", "tiktok_video_%")
+        .order("metric_date", { ascending: false })
+        .limit(200)
+    : supabase
+        .from("metric_snapshots")
+        .select("metric_date,provider_metric_id,impressions,reach,engagement,followers,social_account_id,impressions_unique,impressions_paid,impressions_organic,engaged_users,fan_adds,fan_removes,page_views")
+        .eq("organization_id", organizationId)
+        .not("provider_metric_id", "like", "meta_ads_%")
+        .not("provider_metric_id", "like", "tiktok_video_%")
+        .order("metric_date", { ascending: false })
+        .limit(200);
+
+  const snapshotsQuery = accountId
+    ? snapshotsBaseQuery.eq("social_account_id", accountId)
+    : snapshotsBaseQuery;
+
+  const [{ data: posts }, { data: snapshots }, { data: adSnapshots }] =
+    await Promise.all([
       supabase
         .from("posts")
         .select("id,body,scheduled_for,status,post_type")
         .eq("organization_id", organizationId)
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .limit(5),
-      (() => {
-        const snapshotsQuery = supabase
-          .from("metric_snapshots")
-          .select("metric_date,provider_metric_id,impressions,reach,engagement,followers,social_account_id,impressions_unique,impressions_paid,impressions_organic,engaged_users,fan_adds,fan_removes,page_views")
-          .eq("organization_id", organizationId)
-          .not("provider_metric_id", "like", "meta_ads_%")
-          .not("provider_metric_id", "like", "tiktok_video_%")
-          .order("metric_date", { ascending: false })
-          .limit(200);
-        return accountId ? snapshotsQuery.eq("social_account_id", accountId) : snapshotsQuery;
-      })(),
+      snapshotsQuery,
       supabase
         .from("ad_metric_snapshots")
         .select("ad_account_id,campaign_id,campaign_name,metric_date_start,metric_date_stop,impressions,reach,spend,clicks,engagement,raw_payload")
@@ -208,6 +230,7 @@ export async function getWorkspaceData(accountId?: string | null, campaignId?: s
     accounts: socialAccounts,
     activeAccountId: accountId ?? null,
     activeAccount,
+    activeProvider: activeProvider ?? null,
     queue: (posts ?? []).map((post) => ({
       id: post.id,
       title: post.body.slice(0, 54),
@@ -244,6 +267,7 @@ function emptyWorkspace(): WorkspaceData {
     accounts: [],
     activeAccountId: null,
     activeAccount: null,
+    activeProvider: null,
     queue: [],
     metrics: {
       reach: 0,

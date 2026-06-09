@@ -65,13 +65,13 @@ export function FollowersGrowthChart({ data }: Props) {
         </div>
       ) : null}
 
-      <div className="h-64">
+      <div style={{ minWidth: 0, height: 256 }}>
         {!hasData ? (
           <div className="flex h-full items-center justify-center text-sm text-muted">
             Sin datos de seguidores disponibles.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={256}>
             <ComposedChart data={sliced} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis

@@ -76,8 +76,8 @@ export function CampaignComparisonChart({ data }: Props) {
         </div>
       </div>
 
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
+      <div style={{ minWidth: 0, height: 288 }}>
+        <ResponsiveContainer width="100%" height={288}>
           <BarChart
             data={sorted}
             layout="vertical"

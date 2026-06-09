@@ -75,8 +75,8 @@ export function AdsPerformanceChart({ data }: Props) {
         ))}
       </div>
 
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
+      <div style={{ minWidth: 0, height: 288 }}>
+        <ResponsiveContainer width="100%" height={288}>
           <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
