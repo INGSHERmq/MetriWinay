@@ -3,6 +3,7 @@ import { env } from "@/lib/config";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { syncMetaAnalyticsForOrganization } from "@/modules/social/meta-analytics";
 import { syncAdBreakdownsForOrganization } from "@/modules/social/meta-breakdowns";
+import { syncTikTokAnalyticsForOrganization } from "@/modules/social/tiktok-analytics";
 
 export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
@@ -22,8 +23,11 @@ export async function GET(request: Request) {
   );
 
   for (const organizationId of organizationIds) {
-    await syncMetaAnalyticsForOrganization(organizationId);
-    await syncAdBreakdownsForOrganization(organizationId);
+    await Promise.all([
+      syncMetaAnalyticsForOrganization(organizationId),
+      syncAdBreakdownsForOrganization(organizationId),
+      syncTikTokAnalyticsForOrganization(organizationId)
+    ]);
   }
 
   return NextResponse.json({ syncedOrganizations: organizationIds.size });

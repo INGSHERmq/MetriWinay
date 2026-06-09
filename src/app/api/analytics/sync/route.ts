@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { syncMetaAnalyticsForOrganization } from "@/modules/social/meta-analytics";
 import { syncAdBreakdownsForOrganization } from "@/modules/social/meta-breakdowns";
+import { syncTikTokAnalyticsForOrganization } from "@/modules/social/tiktok-analytics";
 
 export async function POST() {
   const supabase = await createSupabaseServerClient();
@@ -28,10 +29,15 @@ export async function POST() {
     return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   }
 
-  const [metricsResults, breakdownResults] = await Promise.all([
+  const [metaResults, breakdownResults, tiktokResults] = await Promise.all([
     syncMetaAnalyticsForOrganization(member.organization_id),
-    syncAdBreakdownsForOrganization(member.organization_id)
+    syncAdBreakdownsForOrganization(member.organization_id),
+    syncTikTokAnalyticsForOrganization(member.organization_id)
   ]);
 
-  return NextResponse.json({ results: metricsResults, breakdowns: breakdownResults });
+  return NextResponse.json({
+    meta: metaResults,
+    breakdowns: breakdownResults,
+    tiktok: tiktokResults
+  });
 }

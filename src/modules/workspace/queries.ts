@@ -139,6 +139,7 @@ export async function getWorkspaceData(accountId?: string | null, campaignId?: s
           .select("metric_date,provider_metric_id,impressions,reach,engagement,followers,social_account_id,impressions_unique,impressions_paid,impressions_organic,engaged_users,fan_adds,fan_removes,page_views")
           .eq("organization_id", organizationId)
           .not("provider_metric_id", "like", "meta_ads_%")
+          .not("provider_metric_id", "like", "tiktok_video_%")
           .order("metric_date", { ascending: false })
           .limit(200);
         return accountId ? snapshotsQuery.eq("social_account_id", accountId) : snapshotsQuery;
