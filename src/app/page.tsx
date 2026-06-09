@@ -118,7 +118,7 @@ function DashboardView({ workspace, activeSection }: { workspace: WorkspaceData;
         <div className="flex flex-wrap items-center gap-3">
           <ProviderFilter activeProvider={workspace.activeProvider} section={activeSection} />
           {workspace.accounts.length > 1 ? (
-            <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
+            <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} activeProvider={workspace.activeProvider} section={activeSection} />
           ) : null}
         </div>
         <section className="metric-grid gap-4">
@@ -248,7 +248,7 @@ function AnalyticsView({ workspace, activeSection, activeCampaignId }: { workspa
       <div className="flex flex-wrap items-center gap-3">
         <ProviderFilter activeProvider={workspace.activeProvider} section={activeSection} />
         {workspace.accounts.length > 1 ? (
-          <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} section={activeSection} />
+          <AccountFilter accounts={workspace.accounts} activeAccountId={workspace.activeAccountId} activeProvider={workspace.activeProvider} section={activeSection} />
         ) : null}
       </div>
 

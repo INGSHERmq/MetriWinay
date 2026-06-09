@@ -4,6 +4,7 @@ import type { SocialAccount } from "@/modules/social/types";
 type AccountFilterProps = {
   accounts: SocialAccount[];
   activeAccountId: string | null;
+  activeProvider: string | null;
   section: string;
 };
 
@@ -12,15 +13,22 @@ const accountIcon = (type?: string) => {
   return <Icon size={16} />;
 };
 
-export function AccountFilter({ accounts, activeAccountId, section }: AccountFilterProps) {
+export function AccountFilter({ accounts, activeAccountId, activeProvider, section }: AccountFilterProps) {
   if (accounts.length <= 1) return null;
 
   const sectionParam = section !== "dashboard" ? `section=${section}` : "";
 
+  const providerParam = (override?: string | null) => {
+    const p = override ?? activeProvider;
+    return p ? `provider=${p}` : "";
+  };
+
+  const query = (...parts: string[]) => parts.filter(Boolean).join("&");
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <a
-        href={`?${sectionParam}`}
+        href={`?${query(providerParam(null), sectionParam)}`}
         className={`inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors ${
           !activeAccountId
             ? "border-teal bg-teal/10 text-teal"
@@ -31,7 +39,7 @@ export function AccountFilter({ accounts, activeAccountId, section }: AccountFil
       </a>
       {accounts.map((account) => {
         const isActive = activeAccountId === account.id;
-        const href = `?account=${account.id}${sectionParam ? `&${sectionParam}` : ""}`;
+        const href = `?${query(`account=${account.id}`, providerParam(null), sectionParam)}`;
         return (
           <a
             key={account.id}
