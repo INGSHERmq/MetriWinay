@@ -141,7 +141,6 @@ export async function getWorkspaceData(accountId?: string | null, campaignId?: s
         .eq("organization_id", organizationId)
         .in("social_account_id", accountIds)
         .not("provider_metric_id", "like", "meta_ads_%")
-        .not("provider_metric_id", "like", "tiktok_video_%")
         .order("metric_date", { ascending: false })
         .limit(200)
     : supabase
@@ -149,7 +148,6 @@ export async function getWorkspaceData(accountId?: string | null, campaignId?: s
         .select("metric_date,provider_metric_id,impressions,reach,engagement,followers,social_account_id,impressions_unique,impressions_paid,impressions_organic,engaged_users,fan_adds,fan_removes,page_views")
         .eq("organization_id", organizationId)
         .not("provider_metric_id", "like", "meta_ads_%")
-        .not("provider_metric_id", "like", "tiktok_video_%")
         .order("metric_date", { ascending: false })
         .limit(200);
 
@@ -216,13 +214,26 @@ export async function getWorkspaceData(accountId?: string | null, campaignId?: s
       pageViews: 0
     }
   );
-  const adMetrics = buildAdMetrics(adRows, campaignId);
-  const campaigns = buildCampaignList(adRows);
+  const showAds = activeProvider === "meta" || !activeProvider;
+  const adMetrics = showAds ? buildAdMetrics(adRows, campaignId) : {
+    impressions: 0,
+    reach: 0,
+    spend: 0,
+    clicks: 0,
+    ctr: 0,
+    cpc: 0,
+    cpm: 0,
+    costPerThruPlay: 0,
+    costPerResult: 0,
+    actions: 0,
+    currency: "USD"
+  };
+  const campaigns = showAds ? buildCampaignList(adRows) : [];
   const chart = buildChartData(snapshots ?? []);
   const followerGrowth = buildFollowerGrowth(snapshots ?? []);
   const comparison = buildComparison(snapshots ?? []);
-  const campaignComparison = buildCampaignComparison(adRows);
-  const adChart = buildAdChart(adRows, campaignId);
+  const campaignComparison = showAds ? buildCampaignComparison(adRows) : [];
+  const adChart = showAds ? buildAdChart(adRows, campaignId) : [];
 
   return {
     organizationId,

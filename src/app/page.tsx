@@ -323,37 +323,41 @@ function AnalyticsView({ workspace, activeSection, activeCampaignId }: { workspa
         </section>
       ) : null}
 
-      <div className="space-y-2">
-        <div>
-          <h2 className="text-base font-semibold">Metricas de anuncios</h2>
-          <p className="text-sm text-muted">Rendimiento general y por campana</p>
-        </div>
-        <CampaignFilter
-          campaigns={workspace.campaigns}
-          activeCampaignId={activeCampaignId}
-          section={activeSection}
-          accountParam={accountParam}
-        />
-      </div>
+      {workspace.activeProvider !== "tiktok" ? (
+        <>
+          <div className="space-y-2">
+            <div>
+              <h2 className="text-base font-semibold">Metricas de anuncios</h2>
+              <p className="text-sm text-muted">Rendimiento general y por campana</p>
+            </div>
+            <CampaignFilter
+              campaigns={workspace.campaigns}
+              activeCampaignId={activeCampaignId}
+              section={activeSection}
+              accountParam={accountParam}
+            />
+          </div>
 
-      <section className="metric-grid gap-4">
-        <MetricCard label="Alcance ads" value={workspace.adMetrics.reach} change="ads" icon={Eye} tone="teal" />
-        <MetricCard label="Impresiones" value={workspace.adMetrics.impressions} change="ads" icon={Megaphone} tone="teal" />
-        <MetricCard label="Gasto" value={workspace.adMetrics.spend} valueLabel={formatCurrency(workspace.adMetrics.spend, workspace.adMetrics.currency)} change="ads" icon={DollarSign} tone="coral" />
-        <MetricCard label="Clicks" value={workspace.adMetrics.clicks} change="ads" icon={MousePointerClick} tone="gold" />
-        <MetricCard label="CTR" value={workspace.adMetrics.ctr} valueLabel={formatPercent(workspace.adMetrics.ctr)} change="ads" icon={Percent} tone="ink" />
-        <MetricCard label="CPC" value={workspace.adMetrics.cpc} valueLabel={formatCurrency(workspace.adMetrics.cpc, workspace.adMetrics.currency)} change="ads" icon={DollarSign} tone="teal" />
-        <MetricCard label="CPM" value={workspace.adMetrics.cpm} valueLabel={formatCurrency(workspace.adMetrics.cpm, workspace.adMetrics.currency)} change="ads" icon={DollarSign} tone="coral" />
-        <MetricCard label="Resultados" value={workspace.adMetrics.actions} change="ads" icon={ListChecks} tone="gold" />
-        <MetricCard label="Costo por ThruPlay" value={workspace.adMetrics.costPerThruPlay} valueLabel={formatCurrency(workspace.adMetrics.costPerThruPlay, workspace.adMetrics.currency)} change="ads" icon={PlayCircle} tone="ink" />
-        <MetricCard label="Costo por resultado" value={workspace.adMetrics.costPerResult} valueLabel={formatCurrency(workspace.adMetrics.costPerResult, workspace.adMetrics.currency)} change="ads" icon={Target} tone="teal" />
-      </section>
+          <section className="metric-grid gap-4">
+            <MetricCard label="Alcance ads" value={workspace.adMetrics.reach} change="ads" icon={Eye} tone="teal" />
+            <MetricCard label="Impresiones" value={workspace.adMetrics.impressions} change="ads" icon={Megaphone} tone="teal" />
+            <MetricCard label="Gasto" value={workspace.adMetrics.spend} valueLabel={formatCurrency(workspace.adMetrics.spend, workspace.adMetrics.currency)} change="ads" icon={DollarSign} tone="coral" />
+            <MetricCard label="Clicks" value={workspace.adMetrics.clicks} change="ads" icon={MousePointerClick} tone="gold" />
+            <MetricCard label="CTR" value={workspace.adMetrics.ctr} valueLabel={formatPercent(workspace.adMetrics.ctr)} change="ads" icon={Percent} tone="ink" />
+            <MetricCard label="CPC" value={workspace.adMetrics.cpc} valueLabel={formatCurrency(workspace.adMetrics.cpc, workspace.adMetrics.currency)} change="ads" icon={DollarSign} tone="teal" />
+            <MetricCard label="CPM" value={workspace.adMetrics.cpm} valueLabel={formatCurrency(workspace.adMetrics.cpm, workspace.adMetrics.currency)} change="ads" icon={DollarSign} tone="coral" />
+            <MetricCard label="Resultados" value={workspace.adMetrics.actions} change="ads" icon={ListChecks} tone="gold" />
+            <MetricCard label="Costo por ThruPlay" value={workspace.adMetrics.costPerThruPlay} valueLabel={formatCurrency(workspace.adMetrics.costPerThruPlay, workspace.adMetrics.currency)} change="ads" icon={PlayCircle} tone="ink" />
+            <MetricCard label="Costo por resultado" value={workspace.adMetrics.costPerResult} valueLabel={formatCurrency(workspace.adMetrics.costPerResult, workspace.adMetrics.currency)} change="ads" icon={Target} tone="teal" />
+          </section>
 
-      <CampaignComparisonChart data={workspace.campaignComparison} />
+          <CampaignComparisonChart data={workspace.campaignComparison} />
 
-      <AdsPerformanceChart data={workspace.adChart} />
+          <AdsPerformanceChart data={workspace.adChart} />
 
-      <AdBreakdowns organizationId={workspace.organizationId} campaignId={activeCampaignId} />
+          <AdBreakdowns organizationId={workspace.organizationId} campaignId={activeCampaignId} />
+        </>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
         <AnalyticsChart data={workspace.chart} />
