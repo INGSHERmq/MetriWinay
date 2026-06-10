@@ -280,7 +280,7 @@ function AnalyticsView({ workspace, activeSection, activeCampaignId }: { workspa
         <MetricCard label="Posts activos" value={workspace.metrics.posts} change="real" icon={Activity} tone="ink" />
       </section>
 
-      {workspace.metrics.impressionsUnique > 0 ? (
+      {workspace.activeProvider !== "tiktok" && workspace.metrics.impressionsUnique > 0 ? (
         <section className="rounded-md border border-line bg-white p-5 shadow-soft">
           <div className="mb-4">
             <h2 className="text-base font-semibold">Detalle de pagina</h2>
@@ -318,6 +318,41 @@ function AnalyticsView({ workspace, activeSection, activeCampaignId }: { workspa
             <div className="rounded-md border border-line p-3">
               <p className="text-xs text-muted">Vistas de pagina</p>
               <p className="text-lg font-semibold">{workspace.metrics.pageViews.toLocaleString("es-PE")}</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {workspace.activeProvider === "tiktok" ? (
+        <section className="rounded-md border border-line bg-white p-5 shadow-soft">
+          <div className="mb-4">
+            <h2 className="text-base font-semibold">Resumen de TikTok</h2>
+            <p className="text-sm text-muted">Metricas de videos y perfil disponibles con tus permisos actuales</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-md border border-line p-3">
+              <p className="text-xs text-muted">Vistas totales (videos)</p>
+              <p className="text-lg font-semibold">{workspace.metrics.reach.toLocaleString("es-PE")}</p>
+            </div>
+            <div className="rounded-md border border-line p-3">
+              <p className="text-xs text-muted">Likes totales (videos)</p>
+              <p className="text-lg font-semibold">{workspace.metrics.engagement.toLocaleString("es-PE")}</p>
+            </div>
+            <div className="rounded-md border border-line p-3">
+              <p className="text-xs text-muted">Comentarios (videos)</p>
+              <p className="text-lg font-semibold">{workspace.metrics.impressionsUnique.toLocaleString("es-PE")}</p>
+            </div>
+            <div className="rounded-md border border-line p-3">
+              <p className="text-xs text-muted">Compartidos (videos)</p>
+              <p className="text-lg font-semibold">{workspace.metrics.impressionsPaid.toLocaleString("es-PE")}</p>
+            </div>
+            <div className="rounded-md border border-line p-3">
+              <p className="text-xs text-muted">Videos publicados</p>
+              <p className="text-lg font-semibold">{workspace.metrics.impressionsOrganic.toLocaleString("es-PE")}</p>
+            </div>
+            <div className="rounded-md border border-line p-3">
+              <p className="text-xs text-muted">Siguiendo</p>
+              <p className="text-lg font-semibold">{workspace.metrics.fanAdds.toLocaleString("es-PE")}</p>
             </div>
           </div>
         </section>

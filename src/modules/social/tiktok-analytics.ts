@@ -86,6 +86,10 @@ async function syncTikTokAccountAnalytics(account: AccountRow) {
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // Store profile-level stats in dedicated columns that don't overlap with video aggregates:
+  //   impressions_organic → video_count  (total videos on the profile)
+  //   fan_adds           → following_count
+  //   impressions_unique / impressions_paid are reserved for video comment/share sums
   await ingestMetricSnapshot({
     organizationId: account.organization_id,
     socialAccountId: account.id,
@@ -96,11 +100,11 @@ async function syncTikTokAccountAnalytics(account: AccountRow) {
     engagement: user.likes_count ?? 0,
     followers: user.follower_count ?? 0,
     detailed: {
-      impressionsUnique: user.video_count ?? 0,
-      impressionsPaid: user.following_count ?? 0,
-      impressionsOrganic: 0,
+      impressionsUnique: 0,
+      impressionsPaid: 0,
+      impressionsOrganic: user.video_count ?? 0,
       engagedUsers: 0,
-      fanAdds: 0,
+      fanAdds: user.following_count ?? 0,
       fanRemoves: 0,
       pageViews: 0
     }
