@@ -19,18 +19,7 @@ type InsightValue = {
   values?: { value?: number; end_time?: string }[];
 };
 
-type DetailedPageInsightsResult = {
-  impressions: number;
-  reach: number;
-  engagement: number;
-  impressionsUnique: number;
-  impressionsPaid: number;
-  impressionsOrganic: number;
-  engagedUsers: number;
-  fanAdds: number;
-  fanRemoves: number;
-  pageViews: number;
-};
+
 
 function getCompleteLast30DaysTimeRange(now = new Date()) {
   const until = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
@@ -141,7 +130,6 @@ async function syncMetaAccountAnalytics(account: AccountRow) {
 }
 
 async function syncFacebookPageSnapshot(account: AccountRow, accessToken: string) {
-  const today = new Date().toISOString().slice(0, 10);
   const profileResponse = await fetch(
     graphUrl(`/${account.provider_account_id}`, {
       fields: "fan_count,followers_count,talking_about_count",
@@ -158,32 +146,57 @@ async function syncFacebookPageSnapshot(account: AccountRow, accessToken: string
       })
     : {};
 
-  const insights = await fetchPageInsights(account, accessToken);
+  const dailyInsights = await fetchPageInsights(account, accessToken);
   
   try {
-    await ingestMetricSnapshot({
-      organizationId: account.organization_id,
-      socialAccountId: account.id,
-      providerMetricId: "meta_page_daily",
-      metricDate: today,
-      impressions: insights.impressions,
-      reach: insights.reach,
-      engagement: insights.engagement || profile.talking_about_count || 0,
-      followers: profile.followers_count ?? profile.fan_count ?? 0,
-      detailed: {
-        impressionsUnique: insights.impressionsUnique,
-        impressionsPaid: insights.impressionsPaid,
-        impressionsOrganic: insights.impressionsOrganic,
-        engagedUsers: insights.engagedUsers,
-        fanAdds: insights.fanAdds,
-        fanRemoves: insights.fanRemoves,
-        pageViews: insights.pageViews
+    if (dailyInsights.length === 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      await ingestMetricSnapshot({
+        organizationId: account.organization_id,
+        socialAccountId: account.id,
+        providerMetricId: "meta_page_daily",
+        metricDate: today,
+        impressions: 0,
+        reach: 0,
+        engagement: profile.talking_about_count || 0,
+        followers: profile.followers_count ?? profile.fan_count ?? 0,
+        detailed: {
+          impressionsUnique: 0,
+          impressionsPaid: 0,
+          impressionsOrganic: 0,
+          engagedUsers: 0,
+          fanAdds: 0,
+          fanRemoves: 0,
+          pageViews: 0
+        }
+      });
+    } else {
+      for (const day of dailyInsights) {
+        await ingestMetricSnapshot({
+          organizationId: account.organization_id,
+          socialAccountId: account.id,
+          providerMetricId: "meta_page_daily",
+          metricDate: day.date,
+          impressions: day.impressions,
+          reach: day.reach,
+          engagement: day.engagement || profile.talking_about_count || 0,
+          followers: profile.followers_count ?? profile.fan_count ?? 0,
+          detailed: {
+            impressionsUnique: day.impressionsUnique,
+            impressionsPaid: day.impressionsPaid,
+            impressionsOrganic: day.impressionsOrganic,
+            engagedUsers: day.engagedUsers,
+            fanAdds: day.fanAdds,
+            fanRemoves: day.fanRemoves,
+            pageViews: day.pageViews
+          }
+        });
       }
-    });
+    }
     
-    console.log("✅ Métrica insertada correctamente");
+    console.log("✅ Métricas de Facebook insertadas correctamente");
   } catch (error) {
-    console.error("❌ Error al insertar métrica:", error);
+    console.error("❌ Error al insertar métricas de Facebook:", error);
     throw error;
   }
 
@@ -218,7 +231,21 @@ async function syncInstagramSnapshot(account: AccountRow, accessToken: string) {
   return { accountId: account.id, ok: response.ok };
 }
 
-async function fetchPageInsights(account: AccountRow, accessToken: string): Promise<DetailedPageInsightsResult> {
+type DailyInsights = {
+  date: string;
+  impressions: number;
+  reach: number;
+  engagement: number;
+  impressionsUnique: number;
+  impressionsPaid: number;
+  impressionsOrganic: number;
+  engagedUsers: number;
+  fanAdds: number;
+  fanRemoves: number;
+  pageViews: number;
+};
+
+async function fetchPageInsights(account: AccountRow, accessToken: string): Promise<DailyInsights[]> {
   const since = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000).toString();
   const until = Math.floor(Date.now() / 1000).toString();
 
@@ -236,33 +263,46 @@ async function fetchPageInsights(account: AccountRow, accessToken: string): Prom
     { headers: { Accept: "application/json" } }
   );
 
-  if (!response.ok) {
-    return {
-      impressions: 0, reach: 0, engagement: 0,
-      impressionsUnique: 0, impressionsPaid: 0, impressionsOrganic: 0,
-      engagedUsers: 0, fanAdds: 0, fanRemoves: 0, pageViews: 0
-    };
-  }
+  if (!response.ok) return [];
 
   const payload = (await response.json()) as { data?: InsightValue[] };
-  const getTotal = (name: string) =>
-    payload.data
-      ?.find((item) => item.name === name)
-      ?.values?.reduce((sum, item) => sum + Number(item.value ?? 0), 0) ?? 0;
 
-  const impressions = getTotal("page_impressions");
-  return {
-    impressions,
-    reach: impressions,
-    engagement: getTotal("page_post_engagements"),
-    impressionsUnique: getTotal("page_impressions_unique"),
-    impressionsPaid: getTotal("page_impressions_paid"),
-    impressionsOrganic: getTotal("page_impressions_organic"),
-    engagedUsers: getTotal("page_engaged_users"),
-    fanAdds: getTotal("page_fan_adds"),
-    fanRemoves: getTotal("page_fan_removes"),
-    pageViews: getTotal("page_views_total")
+  // Obtener fechas únicas
+  const datesSet = new Set<string>();
+  payload.data?.forEach((m) => {
+    m.values?.forEach((v) => {
+      if (v.end_time) {
+        datesSet.add(v.end_time.slice(0, 10));
+      }
+    });
+  });
+
+  const dates = Array.from(datesSet).sort();
+
+  const getValueForDate = (name: string, dateStr: string) => {
+    const m = payload.data?.find((item) => item.name === name);
+    const v = m?.values?.find((val) => val.end_time?.startsWith(dateStr));
+    return v?.value ?? 0;
   };
+
+  return dates.map((date) => {
+    const impressions = getValueForDate("page_impressions", date);
+    const reach = getValueForDate("page_impressions_unique", date);
+    const engagement = getValueForDate("page_post_engagements", date);
+    return {
+      date,
+      impressions,
+      reach,
+      engagement,
+      impressionsUnique: reach,
+      impressionsPaid: getValueForDate("page_impressions_paid", date),
+      impressionsOrganic: getValueForDate("page_impressions_organic", date),
+      engagedUsers: getValueForDate("page_engaged_users", date),
+      fanAdds: getValueForDate("page_fan_adds", date),
+      fanRemoves: getValueForDate("page_fan_removes", date),
+      pageViews: getValueForDate("page_views_total", date)
+    };
+  });
 }
 
 export async function syncMetaAdsAnalyticsForOrganization(organizationId: string) {

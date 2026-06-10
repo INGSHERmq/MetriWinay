@@ -7,6 +7,7 @@ const TIKTOK_API_HOST = "https://open.tiktokapis.com";
 const TIKTOK_SCOPES = [
   "user.info.basic",
   "user.info.profile",
+  "user.info.stats",
   "video.upload",
   "video.publish",
   "video.list"
@@ -178,7 +179,7 @@ export async function discoverTikTokAccounts(
       username: user.display_name ?? "TikTok User",
       avatarUrl: user.avatar_url_100 ?? user.avatar_url,
       accountType: "tiktok_user",
-      accessToken: undefined
+      accessToken: accessToken
     }
   ];
 }

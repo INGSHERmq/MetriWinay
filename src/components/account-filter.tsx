@@ -14,7 +14,11 @@ const accountIcon = (type?: string) => {
 };
 
 export function AccountFilter({ accounts, activeAccountId, activeProvider, section }: AccountFilterProps) {
-  if (accounts.length <= 1) return null;
+  // Recién aparecer cuando se presiona Facebook o TikTok
+  if (!activeProvider) return null;
+
+  const filteredAccounts = accounts.filter((account) => account.provider === activeProvider);
+  if (filteredAccounts.length === 0) return null;
 
   const sectionParam = section !== "dashboard" ? `section=${section}` : "";
 
@@ -37,7 +41,7 @@ export function AccountFilter({ accounts, activeAccountId, activeProvider, secti
       >
         Todas las cuentas
       </a>
-      {accounts.map((account) => {
+      {filteredAccounts.map((account) => {
         const isActive = activeAccountId === account.id;
         const href = `?${query(`account=${account.id}`, providerParam(null), sectionParam)}`;
         return (

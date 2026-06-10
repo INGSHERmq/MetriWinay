@@ -25,11 +25,11 @@ type TikTokUser = {
 type TikTokVideo = {
   id: string;
   title?: string;
-  views?: number;
-  likes_count?: number;
-  comments_count?: number;
-  shares_count?: number;
-  create_time?: string;
+  view_count?: number;
+  like_count?: number;
+  comment_count?: number;
+  share_count?: number;
+  create_time?: number;
 };
 
 function tiktokApiUrl(path: string) {
@@ -130,9 +130,29 @@ async function fetchTikTokUser(accessToken: string): Promise<TikTokUser | null> 
     }
   );
 
-  if (!response.ok) return null;
+  if (response.ok) {
+    const payload = (await response.json()) as {
+      data?: { user?: TikTokUser };
+    };
+    if (payload.data?.user?.open_id) {
+      return payload.data.user;
+    }
+  }
 
-  const payload = (await response.json()) as {
+  // Fallback to basic fields if stats fields fail (e.g. due to missing user.info.stats scope)
+  const fallbackResponse = await fetch(
+    tiktokApiUrl(`/user/info/?fields=open_id,display_name`),
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json"
+      }
+    }
+  );
+
+  if (!fallbackResponse.ok) return null;
+
+  const payload = (await fallbackResponse.json()) as {
     data?: { user?: TikTokUser };
   };
 
@@ -141,7 +161,7 @@ async function fetchTikTokUser(accessToken: string): Promise<TikTokUser | null> 
 
 async function fetchTikTokVideos(accessToken: string): Promise<TikTokVideo[]> {
   const MAX_VIDEOS = 20;
-  const fields = "id,title,views,likes_count,comments_count,shares_count,create_time";
+  const fields = "id,title,view_count,like_count,comment_count,share_count,create_time";
   const maxCount = Math.min(MAX_VIDEOS, 20);
 
   const response = await fetch(
@@ -176,18 +196,22 @@ async function syncTikTokVideos(
   const supabase = await createSupabaseServerClient();
 
   for (const video of videos) {
+    const videoDate = video.create_time
+      ? new Date(video.create_time * 1000).toISOString().slice(0, 10)
+      : metricDate;
+
     const { error } = await supabase.from("metric_snapshots").upsert(
       {
         organization_id: account.organization_id,
         social_account_id: account.id,
         provider_metric_id: "tiktok_video_stats",
-        metric_date: video.create_time?.slice(0, 10) ?? metricDate,
-        impressions: video.views ?? 0,
-        reach: video.views ?? 0,
-        engagement: video.likes_count ?? 0,
+        metric_date: videoDate,
+        impressions: video.view_count ?? 0,
+        reach: video.view_count ?? 0,
+        engagement: video.like_count ?? 0,
         followers: 0,
-        impressions_unique: video.comments_count ?? 0,
-        impressions_paid: video.shares_count ?? 0,
+        impressions_unique: video.comment_count ?? 0,
+        impressions_paid: video.share_count ?? 0,
         impressions_organic: 0,
         engaged_users: 0,
         fan_adds: 0,
