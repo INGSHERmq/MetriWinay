@@ -7,7 +7,8 @@ import {
   PlugZap,
   Settings,
   Sparkles,
-  LogOut
+  LogOut,
+  Target
 } from "lucide-react";
 import Link from "next/link";
 import { signOutAction } from "@/app/(auth)/actions";
@@ -17,6 +18,7 @@ const navItems = [
   { label: "Dashboard", icon: Home, section: "dashboard" },
   { label: "Publicaciones", icon: CalendarClock, section: "publicaciones" },
   { label: "Analiticas", icon: BarChart3, section: "analiticas" },
+  { label: "Metas", icon: Target, section: "metas" },
   { label: "Reportes", icon: FileText, section: "reportes" },
   { label: "Inbox", icon: Inbox, section: "inbox" },
   { label: "Conexiones", icon: PlugZap, section: "conexiones" },

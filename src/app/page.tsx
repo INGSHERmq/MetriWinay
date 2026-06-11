@@ -24,6 +24,7 @@ import { CampaignFilter } from "@/components/campaign-filter";
 import { BrandedContentPanel } from "@/components/branded-content-panel";
 import { FollowersGrowthChart } from "@/components/followers-growth-chart";
 import { AppShell } from "@/components/app-shell";
+import { BusinessGoals } from "@/components/business-goals";
 import { InboxPanel } from "@/components/inbox-panel";
 import { MetricCard } from "@/components/metric-card";
 import { PostComposer } from "@/components/post-composer";
@@ -31,11 +32,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { ensureDefaultOrganization } from "@/modules/workspace/onboarding";
 import { getWorkspaceData, type WorkspaceData } from "@/modules/workspace/queries";
+import { getGoalsWithProgress } from "@/modules/social/business-goals";
 
 const validSections = new Set([
   "dashboard",
   "publicaciones",
   "analiticas",
+  "metas",
   "reportes",
   "inbox",
   "conexiones",
@@ -67,6 +70,7 @@ export default async function Home({
       ) : null}
       {activeSection === "analiticas" ? <AnalyticsView workspace={workspace} activeSection={activeSection} activeCampaignId={campaign ?? null} /> : null}
       {activeSection === "reportes" ? <ReportsView workspace={workspace} /> : null}
+      {activeSection === "metas" ? <BusinessGoalsView workspace={workspace} /> : null}
       {activeSection === "inbox" ? <InboxView workspace={workspace} /> : null}
       {activeSection === "conexiones" ? <ConnectionsView workspace={workspace} /> : null}
       {activeSection === "ajustes" ? <SettingsView workspace={workspace} /> : null}
@@ -435,6 +439,15 @@ function ReportsView({ workspace }: { workspace: WorkspaceData }) {
         </div>
       </section>
     </div>
+  );
+}
+
+async function BusinessGoalsView({ workspace }: { workspace: WorkspaceData }) {
+  const goals = workspace.organizationId
+    ? await getGoalsWithProgress(workspace.organizationId)
+    : [];
+  return (
+    <BusinessGoals goals={goals} organizationId={workspace.organizationId} />
   );
 }
 
